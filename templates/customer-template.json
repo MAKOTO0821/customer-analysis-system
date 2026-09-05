@@ -1,0 +1,11 @@
+{
+  "id": 0,
+  "name": "顧客名",
+  "company": "会社名",
+  "email": "example@company.com",
+  "phone": "090-XXXX-XXXX",
+  "status": "active",
+  "joinDate": "YYYY-MM-DD",
+  "address": "住所",
+  "notes": "備考"
+}
