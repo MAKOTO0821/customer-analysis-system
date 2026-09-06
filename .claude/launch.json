@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "internal-sns",
+      "runtimeExecutable": "C:\\Users\\user\\OneDrive\\デスクトップ\\顧客ファイル\\internal-sns\\dev.cmd",
+      "runtimeArgs": [],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

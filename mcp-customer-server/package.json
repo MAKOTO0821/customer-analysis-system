@@ -6,7 +6,9 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"テスト実行\""
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "mcp",
@@ -18,5 +20,16 @@
   "license": "MIT",
   "engines": {
     "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "nodemailer": "^10.0.0",
+    "pdfkit": "^0.20.2",
+    "socket.io": "^4.8.3",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "jest": "^30.5.1"
   }
 }
