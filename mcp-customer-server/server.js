@@ -5,6 +5,11 @@ const path = require('path');
 const readline = require('readline');
 const https = require('https');
 const nodemailer = require('nodemailer');
+const sqlite3 = require('sqlite3').verbose();
+
+// SQLite データベースを初期化
+const dbPath = path.join(__dirname, '..', 'data', 'sales.db');
+const db = new sqlite3.Database(dbPath);
 
 // .env ファイルを読み込む
 const envPath = path.join(__dirname, '.env');
@@ -38,6 +43,9 @@ class MCPServer {
       'analyze_sales_by_staff': this.analyzeSalesByStaff.bind(this),
       'send_sales_report_to_slack': this.sendSalesReportToSlack.bind(this),
       'send_email_report': this.sendEmailReport.bind(this),
+      'query_customers_from_db': this.queryCustomersFromDb.bind(this),
+      'query_sales_from_db': this.querySalesFromDb.bind(this),
+      'get_db_statistics': this.getDbStatistics.bind(this),
     };
   }
 
@@ -681,6 +689,82 @@ class MCPServer {
     });
   }
 
+  // ツール15: データベースから顧客情報を取得
+  queryCustomersFromDb() {
+    return new Promise((resolve) => {
+      db.all('SELECT * FROM customers ORDER BY id', (err, rows) => {
+        if (err) {
+          resolve({ success: false, error: err.message });
+        } else {
+          resolve({
+            success: true,
+            data: rows || [],
+            count: rows ? rows.length : 0
+          });
+        }
+      });
+    });
+  }
+
+  // ツール16: データベースから売上データを取得
+  querySalesFromDb() {
+    return new Promise((resolve) => {
+      db.all('SELECT * FROM sales ORDER BY date DESC', (err, rows) => {
+        if (err) {
+          resolve({ success: false, error: err.message });
+        } else {
+          const totalSales = rows ? rows.reduce((sum, r) => sum + (r.total || 0), 0) : 0;
+          resolve({
+            success: true,
+            data: rows || [],
+            count: rows ? rows.length : 0,
+            total_sales: totalSales
+          });
+        }
+      });
+    });
+  }
+
+  // ツール17: データベース統計情報を取得
+  getDbStatistics() {
+    return new Promise((resolve) => {
+      db.serialize(() => {
+        let stats = { customers: 0, sales: 0, total_sales: 0 };
+        let completed = 0;
+
+        db.get('SELECT COUNT(*) as count FROM customers', (err, row) => {
+          if (!err) stats.customers = row.count;
+          completed++;
+          if (completed === 3) finalizeStats();
+        });
+
+        db.get('SELECT COUNT(*) as count FROM sales', (err, row) => {
+          if (!err) stats.sales = row.count;
+          completed++;
+          if (completed === 3) finalizeStats();
+        });
+
+        db.get('SELECT SUM(total) as total FROM sales', (err, row) => {
+          if (!err) stats.total_sales = row.total || 0;
+          completed++;
+          if (completed === 3) finalizeStats();
+        });
+
+        const finalizeStats = () => {
+          resolve({
+            success: true,
+            data: {
+              total_customers: stats.customers,
+              total_sales_records: stats.sales,
+              total_sales_amount: stats.total_sales,
+              database: 'SQLite'
+            }
+          });
+        };
+      });
+    });
+  }
+
   // MCPリクエストを処理（非同期対応）
   async handleRequest(request) {
     const { method, params } = request;
@@ -816,6 +900,30 @@ class MCPServer {
                 type: 'object',
                 properties: {}
               }
+            },
+            {
+              name: 'query_customers_from_db',
+              description: 'データベースから全顧客情報を取得',
+              inputSchema: {
+                type: 'object',
+                properties: {}
+              }
+            },
+            {
+              name: 'query_sales_from_db',
+              description: 'データベースから全売上データを取得',
+              inputSchema: {
+                type: 'object',
+                properties: {}
+              }
+            },
+            {
+              name: 'get_db_statistics',
+              description: 'データベース統計情報を取得',
+              inputSchema: {
+                type: 'object',
+                properties: {}
+              }
             }
           ]
         };
@@ -840,6 +948,12 @@ class MCPServer {
           return await this.sendSalesReportToSlack();
         } else if (toolName === 'send_email_report') {
           return await this.sendEmailReport();
+        } else if (toolName === 'query_customers_from_db') {
+          return await this.queryCustomersFromDb();
+        } else if (toolName === 'query_sales_from_db') {
+          return await this.querySalesFromDb();
+        } else if (toolName === 'get_db_statistics') {
+          return await this.getDbStatistics();
         } else if (this.tools[toolName]) {
           return this.tools[toolName]();
         } else {
