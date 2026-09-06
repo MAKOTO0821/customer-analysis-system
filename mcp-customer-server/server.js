@@ -3,11 +3,13 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const https = require('https');
 
 // MCPプロトコル実装のシンプル版
 class MCPServer {
   constructor() {
     this.dataDir = path.join(__dirname, '..', 'data');
+    this.slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
     this.tools = {
       'analyze_customers': this.analyzeCustomers.bind(this),
       'analyze_sales': this.analyzeSales.bind(this),
@@ -21,6 +23,7 @@ class MCPServer {
       'get_sales_by_product': this.getSalesByProduct.bind(this),
       'get_top_customers': this.getTopCustomers.bind(this),
       'analyze_sales_by_staff': this.analyzeSalesByStaff.bind(this),
+      'send_sales_report_to_slack': this.sendSalesReportToSlack.bind(this),
     };
   }
 
@@ -412,8 +415,152 @@ class MCPServer {
     }
   }
 
-  // MCPリクエストを処理
-  handleRequest(request) {
+  // ツール13: Slack に売上レポートを送信
+  sendSalesReportToSlack() {
+    return new Promise((resolve) => {
+      try {
+        if (!this.slackWebhookUrl) {
+          resolve({ success: false, error: 'SLACK_WEBHOOK_URL が設定されていません' });
+          return;
+        }
+
+        const salesAnalysis = this.analyzeSales();
+        const topCustomers = this.getTopCustomers(3);
+        const staffPerformance = this.analyzeSalesByStaff();
+
+        if (!salesAnalysis.success || !topCustomers.success || !staffPerformance.success) {
+          resolve({ success: false, error: 'データ取得に失敗しました' });
+          return;
+        }
+
+        const salesData = salesAnalysis.data;
+        const topCusts = topCustomers.data;
+        const staffPearf = staffPerformance.data;
+
+        const slackMessage = {
+          text: '📊 売上レポート',
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: '📊 売上分析レポート'
+              }
+            },
+            {
+              type: 'section',
+              fields: [
+                {
+                  type: 'mrkdwn',
+                  text: `*総売上*\n¥${salesData.total_sales.toLocaleString('ja-JP')}`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*売上記録数*\n${salesData.total_records}件`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*平均注文額*\n¥${salesData.average_order_value.toLocaleString('ja-JP')}`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*ユニーク顧客*\n${salesData.unique_customers}社`
+                }
+              ]
+            },
+            {
+              type: 'divider'
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '*🏆 VIP顧客トップ3*'
+              }
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: topCusts.map((c, i) => `${i + 1}. ${c.customer_name} - ¥${c.total_spent.toLocaleString('ja-JP')}`).join('\n')
+              }
+            },
+            {
+              type: 'divider'
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '*👨‍💼 スタッフパフォーマンス*'
+              }
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: staffPearf.map((s, i) => `${i + 1}. ${s.staff_name} - ¥${s.total_sales.toLocaleString('ja-JP')}`).join('\n')
+              }
+            },
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: `📅 生成時刻: ${new Date().toLocaleString('ja-JP')}`
+                }
+              ]
+            }
+          ]
+        };
+
+        const postData = JSON.stringify(slackMessage);
+        const url = new URL(this.slackWebhookUrl);
+
+        const options = {
+          hostname: url.hostname,
+          path: url.pathname + url.search,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        };
+
+        const req = https.request(options, (res) => {
+          let data = '';
+          res.on('data', chunk => { data += chunk; });
+          res.on('end', () => {
+            if (res.statusCode === 200) {
+              resolve({
+                success: true,
+                message: 'Slack にレポートを送信しました',
+                timestamp: new Date().toISOString()
+              });
+            } else {
+              resolve({
+                success: false,
+                error: `Slack返信エラー: ${res.statusCode}`,
+                response: data
+              });
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          resolve({ success: false, error: error.message });
+        });
+
+        req.write(postData);
+        req.end();
+      } catch (error) {
+        resolve({ success: false, error: error.message });
+      }
+    });
+  }
+
+  // MCPリクエストを処理（非同期対応）
+  async handleRequest(request) {
     const { method, params } = request;
 
     switch (method) {
@@ -531,6 +678,14 @@ class MCPServer {
                 type: 'object',
                 properties: {}
               }
+            },
+            {
+              name: 'send_sales_report_to_slack',
+              description: 'Slack に売上レポートを送信',
+              inputSchema: {
+                type: 'object',
+                properties: {}
+              }
             }
           ]
         };
@@ -551,6 +706,8 @@ class MCPServer {
           return this.getSalesByProduct(toolArgs.product_name);
         } else if (toolName === 'get_top_customers') {
           return this.getTopCustomers(toolArgs.limit);
+        } else if (toolName === 'send_sales_report_to_slack') {
+          return await this.sendSalesReportToSlack();
         } else if (this.tools[toolName]) {
           return this.tools[toolName]();
         } else {
@@ -572,10 +729,10 @@ class MCPServer {
 
     console.error('[MCP] カスタム顧客分析サーバーが起動しました');
 
-    rl.on('line', (line) => {
+    rl.on('line', async (line) => {
       try {
         const request = JSON.parse(line);
-        const response = this.handleRequest(request);
+        const response = await this.handleRequest(request);
         console.log(JSON.stringify(response));
       } catch (error) {
         console.log(JSON.stringify({ success: false, error: error.message }));
