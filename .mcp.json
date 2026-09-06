@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "customer-analysis": {
+      "command": "node",
+      "args": [
+        "./mcp-customer-server/server.js"
+      ],
+      "env": {}
+    }
+  }
+}

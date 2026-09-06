@@ -1,0 +1,14 @@
+{
+  "comment": "このファイルをClaudeの設定に追加してください",
+  "mcp": {
+    "servers": {
+      "customer-analysis": {
+        "command": "node",
+        "args": [
+          "C:\\Users\\user\\OneDrive\\デスクトップ\\顧客ファイル\\mcp-customer-server\\server.js"
+        ],
+        "env": {}
+      }
+    }
+  }
+}

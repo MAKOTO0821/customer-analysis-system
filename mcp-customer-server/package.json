@@ -1,0 +1,22 @@
+{
+  "name": "mcp-customer-server",
+  "version": "1.0.0",
+  "description": "カスタム顧客データ分析MCP サーバー",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"テスト実行\""
+  },
+  "keywords": [
+    "mcp",
+    "customer",
+    "analysis",
+    "server"
+  ],
+  "author": "Claude User",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
