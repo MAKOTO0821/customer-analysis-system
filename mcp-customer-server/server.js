@@ -4,6 +4,19 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const https = require('https');
+const nodemailer = require('nodemailer');
+
+// .env ファイルを読み込む
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const [key, value] = line.split('=');
+    if (key && value) {
+      process.env[key.trim()] = value.trim();
+    }
+  });
+}
 
 // MCPプロトコル実装のシンプル版
 class MCPServer {
@@ -24,6 +37,7 @@ class MCPServer {
       'get_top_customers': this.getTopCustomers.bind(this),
       'analyze_sales_by_staff': this.analyzeSalesByStaff.bind(this),
       'send_sales_report_to_slack': this.sendSalesReportToSlack.bind(this),
+      'send_email_report': this.sendEmailReport.bind(this),
     };
   }
 
@@ -559,6 +573,114 @@ class MCPServer {
     });
   }
 
+  // ツール14: Email にレポートを送信
+  sendEmailReport() {
+    return new Promise(async (resolve) => {
+      try {
+        const emailUser = process.env.EMAIL_USER;
+        const emailPassword = process.env.EMAIL_PASSWORD;
+        const emailRecipient = process.env.EMAIL_RECIPIENT;
+
+        if (!emailUser || !emailPassword || !emailRecipient) {
+          resolve({ success: false, error: 'Email 認証情報が設定されていません' });
+          return;
+        }
+
+        const salesAnalysis = this.analyzeSales();
+        const topCustomers = this.getTopCustomers(3);
+        const staffPerformance = this.analyzeSalesByStaff();
+
+        if (!salesAnalysis.success || !topCustomers.success || !staffPerformance.success) {
+          resolve({ success: false, error: 'データ取得に失敗しました' });
+          return;
+        }
+
+        const salesData = salesAnalysis.data;
+        const topCusts = topCustomers.data;
+        const staffPearf = staffPerformance.data;
+
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: emailUser,
+            pass: emailPassword
+          }
+        });
+
+        const htmlContent = `
+          <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; }
+                h1 { color: #333; }
+                table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .section { margin: 20px 0; }
+              </style>
+            </head>
+            <body>
+              <h1>📊 売上分析レポート</h1>
+
+              <div class="section">
+                <h2>売上サマリー</h2>
+                <table>
+                  <tr><th>項目</th><th>値</th></tr>
+                  <tr><td>総売上</td><td>¥${salesData.total_sales.toLocaleString('ja-JP')}</td></tr>
+                  <tr><td>売上記録数</td><td>${salesData.total_records}件</td></tr>
+                  <tr><td>平均注文額</td><td>¥${salesData.average_order_value.toLocaleString('ja-JP')}</td></tr>
+                  <tr><td>ユニーク顧客</td><td>${salesData.unique_customers}社</td></tr>
+                </table>
+              </div>
+
+              <div class="section">
+                <h2>🏆 VIP顧客トップ3</h2>
+                <table>
+                  <tr><th>順位</th><th>顧客名</th><th>売上</th></tr>
+                  ${topCusts.map((c, i) => `<tr><td>${i + 1}</td><td>${c.customer_name}</td><td>¥${c.total_spent.toLocaleString('ja-JP')}</td></tr>`).join('')}
+                </table>
+              </div>
+
+              <div class="section">
+                <h2>👨‍💼 スタッフパフォーマンス</h2>
+                <table>
+                  <tr><th>順位</th><th>スタッフ名</th><th>売上</th><th>取引数</th></tr>
+                  ${staffPearf.map((s, i) => `<tr><td>${i + 1}</td><td>${s.staff_name}</td><td>¥${s.total_sales.toLocaleString('ja-JP')}</td><td>${s.transaction_count}回</td></tr>`).join('')}
+                </table>
+              </div>
+
+              <div class="section">
+                <p>📅 生成時刻: ${new Date().toLocaleString('ja-JP')}</p>
+              </div>
+            </body>
+          </html>
+        `;
+
+        const mailOptions = {
+          from: emailUser,
+          to: emailRecipient,
+          subject: '📊 売上分析レポート - ' + new Date().toLocaleDateString('ja-JP'),
+          html: htmlContent
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            resolve({ success: false, error: error.message });
+          } else {
+            resolve({
+              success: true,
+              message: 'Email を送信しました',
+              recipient: emailRecipient,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+      } catch (error) {
+        resolve({ success: false, error: error.message });
+      }
+    });
+  }
+
   // MCPリクエストを処理（非同期対応）
   async handleRequest(request) {
     const { method, params } = request;
@@ -686,6 +808,14 @@ class MCPServer {
                 type: 'object',
                 properties: {}
               }
+            },
+            {
+              name: 'send_email_report',
+              description: 'Email に売上レポートを送信',
+              inputSchema: {
+                type: 'object',
+                properties: {}
+              }
             }
           ]
         };
@@ -708,6 +838,8 @@ class MCPServer {
           return this.getTopCustomers(toolArgs.limit);
         } else if (toolName === 'send_sales_report_to_slack') {
           return await this.sendSalesReportToSlack();
+        } else if (toolName === 'send_email_report') {
+          return await this.sendEmailReport();
         } else if (this.tools[toolName]) {
           return this.tools[toolName]();
         } else {
