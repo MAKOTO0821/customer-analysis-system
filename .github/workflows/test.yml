@@ -3,13 +3,8 @@ name: 🧪 テスト駆動開発（TDD）- 自動テスト実行
 on:
   push:
     branches: [ main, master, develop ]
-    paths:
-      - 'mcp-customer-server/**'
-      - '.github/workflows/test.yml'
   pull_request:
     branches: [ main, master, develop ]
-    paths:
-      - 'mcp-customer-server/**'
 
 jobs:
   test:
