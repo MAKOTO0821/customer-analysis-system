@@ -25,9 +25,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
 
     - name: 📚 依存パッケージをインストール
-      run: |
-        cd mcp-customer-server
-        npm ci
+            run: cd mcp-customer-server && npm ci
 
     - name: 🧪 ユニットテストを実行
       run: |
@@ -62,9 +60,7 @@ jobs:
         node-version: '20.x'        
 
     - name: 📚 依存パッケージをインストール
-      run: |
-        cd mcp-customer-server
-        npm ci
+            run: cd mcp-customer-server && npm ci
 
     - name: 📝 ファイル構造をチェック
       run: |
@@ -90,9 +86,7 @@ jobs:
         node-version: '20.x'       
 
     - name: 📚 依存パッケージをインストール
-      run: |
-        cd mcp-customer-server
-        npm ci
+            run: cd mcp-customer-server && npm ci
 
     - name: 🔍 依存関係をチェック
       run: |
