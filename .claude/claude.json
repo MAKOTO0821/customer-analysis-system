@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "customer-analysis": {
+      "command": "node",
+      "args": ["server.js"],
+      "cwd": "./mcp-customer-server",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

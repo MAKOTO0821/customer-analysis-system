@@ -1,0 +1,149 @@
+.search-box {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  font-size: 1em;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 12px;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+  background: #ff5252;
+  transform: scale(1.1);
+}
+
+.search-results {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 5px;
+  border-left: 4px solid #667eea;
+}
+
+.results-count {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-weight: bold;
+  font-size: 1.05em;
+}
+
+.no-results {
+  margin: 0;
+  text-align: center;
+  color: #999;
+  padding: 20px;
+  font-size: 1.1em;
+}
+
+.results-list {
+  display: grid;
+  gap: 10px;
+}
+
+.result-item {
+  background: white;
+  padding: 12px 15px;
+  border-radius: 5px;
+  border-left: 3px solid #667eea;
+  transition: all 0.2s ease;
+}
+
+.result-item:hover {
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+  transform: translateX(5px);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.result-name {
+  font-weight: bold;
+  color: #333;
+  font-size: 1.05em;
+}
+
+.result-id {
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.result-details {
+  display: flex;
+  gap: 15px;
+  font-size: 0.95em;
+  color: #666;
+}
+
+.detail-email,
+.detail-phone {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+@media (max-width: 768px) {
+  .search-box {
+    padding: 15px;
+  }
+
+  .result-details {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .result-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .result-id {
+    align-self: flex-start;
+  }
+}
