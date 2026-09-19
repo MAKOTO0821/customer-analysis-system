@@ -1,1 +1,1 @@
-web: cd mcp-customer-server && npm install && npm start
+web: cd mcp-customer-server && npm start
