@@ -5,7 +5,12 @@
   "main": "mcp-customer-server/server.js",
   "scripts": {
     "start": "cd mcp-customer-server && npm start",
-    "postinstall": "cd mcp-customer-server && npm install && cd ../customer-dashboard && npm install"
+    "postinstall": "npm run setup",
+    "setup": "npm run install:mcp && npm run install:dashboard && npm run build:dashboard",
+    "install:mcp": "cd mcp-customer-server && npm install && cd ..",
+    "install:dashboard": "cd customer-dashboard && npm install && cd ..",
+    "build:dashboard": "cd customer-dashboard && npm run build && cd .. && npm run copy:dashboard",
+    "copy:dashboard": "node scripts/copy-dashboard.js"
   },
   "engines": {
     "node": "18.x"
