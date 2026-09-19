@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const https = require('https');
+const express = require('express');
+const cors = require('cors');
 const nodemailer = require('nodemailer');
 const sqlite3 = require('sqlite3').verbose();
 
@@ -992,6 +994,64 @@ class MCPServer {
   }
 }
 
-// サーバー起動
-const server = new MCPServer();
-server.start();
+// HTTP サーバー起動
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const mcpServer = new MCPServer();
+
+app.get('/customers', async (req, res) => {
+  try {
+    const customersPath = path.join(mcpServer.dataDir, 'customers.json');
+    const data = fs.readFileSync(customersPath, 'utf8');
+    const customers = JSON.parse(data);
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/sales', async (req, res) => {
+  try {
+    const salesPath = path.join(mcpServer.dataDir, 'sales-records.csv');
+    const content = fs.readFileSync(salesPath, 'utf8');
+    const lines = content.split('\n').filter(line => line.trim());
+    const sales = lines.slice(1).map(line => {
+      const [date, customer, product, quantity, unitPrice, total, staff] = line.split(',');
+      return { date, customer, product, quantity, unitPrice, total, staff };
+    });
+    res.json(sales);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/statistics', async (req, res) => {
+  try {
+    const result = await mcpServer.getDbStatistics();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// React ビルド出力を静的ファイルとして提供
+const publicPath = path.join(__dirname, 'public');
+if (fs.existsSync(publicPath)) {
+  app.use(express.static(publicPath));
+
+  // SPA 用：すべてのリクエストを index.html にルーティング
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(publicPath, 'index.html'));
+  });
+}
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.error(`[MCP] HTTP サーバーがポート ${PORT} で起動しました`);
+  console.error(`[MCP] フロントエンド: http://localhost:${PORT}`);
+
+  // stdin を pause して、プロセスを生存させる
+  process.stdin.pause();
+});
