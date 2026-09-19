@@ -1,0 +1,15 @@
+{
+  "name": "customer-analysis-system",
+  "version": "1.0.0",
+  "description": "Customer Analysis System with React Dashboard",
+  "main": "mcp-customer-server/server.js",
+  "scripts": {
+    "start": "cd mcp-customer-server && npm start",
+    "postinstall": "cd mcp-customer-server && npm install && cd ../customer-dashboard && npm install"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "author": "",
+  "license": "ISC"
+}
