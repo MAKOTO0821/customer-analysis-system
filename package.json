@@ -1,0 +1,8 @@
+{
+  "name": "customer-analysis-system",
+  "version": "1.0.0",
+  "description": "Customer Analysis System with React Dashboard",
+  "engines": {
+    "node": "18.x"
+  }
+}
